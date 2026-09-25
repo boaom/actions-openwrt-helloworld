@@ -184,6 +184,45 @@ ubi 分区 112MiB，squashfs 压缩后放得下 xray-core + hysteria + shadowsoc
 
 ---
 
+## 节点导入：新固件上不用再手工补 `ws_host`
+
+订阅里那批 vmess 节点有个坑：`server` 和 WS `Host`/SNI 不同名
+（`server=cf.susuifa.top`，`Host/SNI=orm.susuifa.top`）。走 Cloudflare 时
+如果 WS 握手里不带 Host 头，就会打到错误的 vhost。
+
+- **旧固件（K2P 原厂的 `luci-app-ssr-plus 181-4` + `xray 1.2.4`，2019 年的）**：
+  导入时 TLS 打开只写 `tls_host`，生成的 xray 配置**没有 WS Host 头**，
+  必须在每个节点的 `/etc/config/shadowsocksr` 里手工补 `option ws_host`。
+- **本仓库编出来的固件（ssr-plus 196）**：`gen_config.lua` 里已经是
+
+  ```lua
+  wsSettings = (server.transport == "ws") and (...) and {
+      host = server.ws_host or server.tls_host or nil,
+      path = server.ws_path or "/",
+  }
+  ```
+
+  也就是**没有 `ws_host` 会自动回退到 `tls_host`**，直接导入即可。
+  Clash/mihomo 模式那边同理（`first_nonempty(ws_host, tls_host)`）。
+
+所以三个设备刷上新固件后：
+
+1. LuCI → 「ShadowSocksR Plus+」→ 服务器订阅 → 加上订阅地址 → 手动更新；
+2. `subscribe.lua` 里的 `isClashYAML()` 会自动识别 Clash YAML（你的订阅就是 YAML），
+   默认走**传统模式**（xray / ss-rust / ssr-libev / trojan / hysteria 各用各的原生内核）；
+3. 全局设置里把 `enable_mihomo` 打开就切到 **Mihomo(Clash) 模式**，
+   整份 YAML 基本原样交给 mihomo，trojan / hysteria2 / tuic 全走它一个内核。
+
+验证生成结果（不用连外网）：
+
+```sh
+lua /usr/share/shadowsocksr/gen_config.lua <section> tcp 1234   # 传统模式
+/usr/bin/xray -test -config /var/etc/ssrplus/xray.json          # 传统模式
+mihomo -t -d /etc/ssrplus -f /etc/ssrplus/mihomo.yaml           # Clash 模式
+```
+
+---
+
 ## 常用改动
 
 **换默认 LAN IP / 主机名**：改对应的 `diy-part2-*.sh`，注意脚本末尾的 `grep` 校验会打印命中情况。
