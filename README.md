@@ -49,8 +49,41 @@ mipsel_24kc 上现代代理内核装不下；N1 是 eMMC、WR30U 是 128M NAND�
 
 - **ss 的 2022-blake3 只有 shadowsocks-rust 支持**，`shadowsocks-libev 3.3.5` 不支持。
   所以 aarch64 这两台用的是 rust 版客户端，别改成 libev。
-- **ssr-plus 支持 hysteria2 客户端**（`hy2_type_list`，可走 `hysteria` 二进制或 `Xray`），
-  所以 `INCLUDE_Hysteria` 要带上，否则那 3 个 hysteria2 节点是灰的。
+- **hysteria2 靠 mihomo（Clash Meta）**。ssr-plus 196 把 trojan / hysteria2 / tuic
+  统一交给 mihomo 了，aarch64 上 `INCLUDE_Mihomo` 默认就是 `y`；
+  另外原生 `hysteria` 二进制也一并带上，两种模式都能走。
+
+### ⚠️ helloworld 的默认分支是 `dev`，ssr-plus 196 改过配置符号
+
+`feeds.conf.default` 里写的是 `src-git helloworld https://github.com/fw876/helloworld.git`，
+不带分支，也就是跟仓库默认分支 —— **`dev`，不是 `master`**。
+`master` 停在 190，`dev` 已经是 196，两边的 Kconfig 符号差很多：
+
+| `master`(190) 有 | `dev`(196) 里的状态 |
+|---|---|
+| `INCLUDE_Trojan` | ✘ 没了，trojan 交给 mihomo 或独立 `trojan` 包 |
+| `INCLUDE_Hysteria` | ✘ 没了，hysteria2 交给 mihomo |
+| `INCLUDE_Tuic_Client` | ✘ 没了 |
+| `INCLUDE_IPT2Socks` | ✘ 没了，改成 LUCI_DEPENDS 里无条件带 `ipt2socks` |
+| `INCLUDE_DNS2SOCKS` | ✘ 没了，改成 `dns2tcp` |
+| `INCLUDE_V2ray` | ✘ 没了，V2ray 选项只剩 `None` / `Xray-core` |
+| `INCLUDE_Shadowsocks_Libev_Client` | ✘ 没了，SS 客户端只剩 `None` / `Shadowsocks Rust` |
+| — | ✔ 新增 `INCLUDE_Mihomo`（aarch64 默认 y） |
+| — | ✔ 新增 `INCLUDE_Http_Proxy`（aarch64 默认 y，带 `3proxy`） |
+| — | ✔ 新增 `INCLUDE_GeoData`（默认只在 i386/x86_64 打开） |
+
+`.config` 里写了不存在的符号**不会报错**，`make defconfig` 会静默丢掉，
+结果就是"以为带了 trojan，其实没带"。所以这三个配置一律：
+
+- 只写 `dev` 分支真实存在的 `INCLUDE_*` 符号；
+- 内核二进制再用 `CONFIG_PACKAGE_<名字>=y` 钉一遍（`xray-core` / `mihomo` /
+  `hysteria` / `trojan` / `shadowsocks-rust-sslocal` / `shadowsocksr-libev-ssr-redir`）；
+- workflow 里 `make defconfig` 之后会打印 `CONFIG_TARGET.*DEVICE.*=y` 并断言目标设备，
+  编错设备不会白跑两小时。
+
+> 顺带一提：`GeoData`（`v2ray-geoip` / `v2ray-geosite`）关掉是安全的 ——
+> `gen_config.lua` 里根本没有引用 `geoip:` / `geosite:`，路由是靠 ipset + dnsmasq 做的。
+> 另外 `mihomo` 会 `select v2ray-geoip`，所以 geoip 数据其实还是进来了。
 
 ### 透明代理后端
 

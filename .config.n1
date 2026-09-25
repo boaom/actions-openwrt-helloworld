@@ -31,51 +31,64 @@ CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
 
 #
 # ssr-plus 主体
+# 注意：符号按 helloworld 的 dev 分支（默认分支）luci-app-ssr-plus 196 来写，
+# 老 master 分支上的 INCLUDE_Trojan / INCLUDE_Hysteria / INCLUDE_IPT2Socks /
+# INCLUDE_DNS2SOCKS / INCLUDE_V2ray / INCLUDE_Shadowsocks_Libev_Client 在 196 里
+# 已经不存在了，写进去会被 make defconfig 静默丢掉，所以内核一律用
+# CONFIG_PACKAGE_<二进制>=y 直接钉住。
 #
 CONFIG_PACKAGE_luci-app-ssr-plus=y
 CONFIG_PACKAGE_luci-i18n-ssr-plus-zh-cn=y
 
 # Lean's LEDE 默认还是 firewall3 / iptables（DEFAULT_PACKAGES.router 里就是 firewall+iptables）
 CONFIG_PACKAGE_luci-app-ssr-plus_Iptables_Transparent_Proxy=y
+# CONFIG_PACKAGE_luci-app-ssr-plus_Nftables_Transparent_Proxy is not set
 
 #
-# 代理内核：aarch64 体积不是问题，订阅里的 59 个节点全部能跑
+# 196 版把 trojan / hysteria2 / tuic 这些统一交给 mihomo（Clash Meta）了，
+# aarch64 上 INCLUDE_Mihomo 默认就是 y，这里显式写出来免得哪天上游改默认值
 #
-#   vmess / vless+REALITY  -> xray-core
-#   trojan                 -> trojan (C++)
-#   ss（2022-blake3）       -> shadowsocks-rust，libev 3.3.x 不支持 2022-blake3
-#   ssr                    -> shadowsocksr-libev
-#   hysteria2              -> hysteria v2
-#
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Mihomo=y
 CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Xray=y
-CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Trojan=y
-CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Rust_Client=y
-CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Libev_Client=y
-CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Hysteria=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ChinaDNS_NG=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Http_Proxy=y
 
-# 显式排掉同一个 choice 里的其它选项，避免 defconfig 走默认值
+# 显式排掉同一个 choice / 用不到的选项，避免 defconfig 走默认值
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_NONE_V2RAY is not set
-# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_V2ray is not set
-# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Libev_Client is not set
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Rust_Client=y
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_NONE_Client is not set
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Libev_Client=y
 CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_NONE_Server=y
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Rust_Server is not set
-# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Libev_Server is not set
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Libev_Server is not set
-
-# 分流 / DNS 组件
-CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_DNS2SOCKS=y
-CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ChinaDNS_NG=y
-CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_IPT2Socks=y
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_MosDNS is not set
-# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_NaiveProxy is not set
-# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Tuic_Client is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_GeoData is not set
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadow_TLS is not set
 # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Kcptun is not set
-# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Redsocks2 is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_NaiveProxy is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Simple_Obfs is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_V2ray_Plugin is not set
 
 #
-# 显式补齐依赖（多数会被 select 自动带上，写出来更稳）
+# 代理内核：aarch64 体积够，订阅里的 59 个节点全部能跑
+#
+#   vmess / vless+REALITY  -> xray-core
+#   ss（2022-blake3）       -> shadowsocks-rust，libev 3.3.x 不支持 2022-blake3
+#   ssr                    -> shadowsocksr-libev
+#   trojan                 -> trojan（原生），或 mihomo 走 Clash 模式
+#   hysteria2              -> hysteria v2（原生），或 mihomo 走 Clash 模式
+#
+CONFIG_PACKAGE_xray-core=y
+CONFIG_PACKAGE_mihomo=y
+CONFIG_PACKAGE_v2ray-geoip=y
+CONFIG_PACKAGE_trojan=y
+CONFIG_PACKAGE_hysteria=y
+CONFIG_PACKAGE_shadowsocks-rust-sslocal=y
+CONFIG_PACKAGE_shadowsocksr-libev-ssr-redir=y
+CONFIG_PACKAGE_shadowsocksr-libev-ssr-local=y
+
+#
+# ssr-plus 的 LUCI_DEPENDS 里本来就会带上这些，写出来更稳
 #
 CONFIG_PACKAGE_dnsmasq-full=y
 CONFIG_PACKAGE_ipset=y
@@ -86,23 +99,23 @@ CONFIG_PACKAGE_kmod-ipt-nat=y
 CONFIG_PACKAGE_kmod-ipt-tproxy=y
 CONFIG_PACKAGE_libuci-lua=y
 CONFIG_PACKAGE_lua=y
+CONFIG_PACKAGE_lua-neturl=y
+CONFIG_PACKAGE_lyaml=y
+CONFIG_PACKAGE_coreutils=y
+CONFIG_PACKAGE_coreutils-base64=y
 CONFIG_PACKAGE_curl=y
 CONFIG_PACKAGE_jq=y
 CONFIG_PACKAGE_ip-full=y
-CONFIG_PACKAGE_coreutils=y
-CONFIG_PACKAGE_coreutils-base64=y
-CONFIG_PACKAGE_tcping=y
-CONFIG_PACKAGE_nping=y
+CONFIG_PACKAGE_bind-dig=y
 CONFIG_PACKAGE_microsocks=y
+CONFIG_PACKAGE_ipt2socks=y
 CONFIG_PACKAGE_dns2tcp=y
-CONFIG_PACKAGE_lua-neturl=y
+CONFIG_PACKAGE_chinadns-ng=y
 CONFIG_PACKAGE_resolveip=y
-CONFIG_PACKAGE_trojan=y
-CONFIG_PACKAGE_xray-core=y
-CONFIG_PACKAGE_hysteria=y
-CONFIG_PACKAGE_shadowsocks-rust-sslocal=y
-CONFIG_PACKAGE_shadowsocksr-libev-ssr-redir=y
-CONFIG_PACKAGE_shadowsocksr-libev-ssr-local=y
+CONFIG_PACKAGE_nping=y
+CONFIG_PACKAGE_unzip=y
+CONFIG_PACKAGE_xz=y
+CONFIG_PACKAGE_xz-utils=y
 
 #
 # 明确排除：这台用不上，编进去只浪费时间
@@ -112,3 +125,6 @@ CONFIG_PACKAGE_shadowsocksr-libev-ssr-local=y
 # CONFIG_PACKAGE_v2ray-core is not set
 # CONFIG_PACKAGE_sing-box is not set
 # CONFIG_PACKAGE_mosdns is not set
+# CONFIG_PACKAGE_naiveproxy is not set
+# CONFIG_PACKAGE_shadow-tls is not set
+# CONFIG_PACKAGE_kcptun-client is not set
