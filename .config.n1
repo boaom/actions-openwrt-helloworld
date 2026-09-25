@@ -1,0 +1,114 @@
+#
+# Phicomm N1（Amlogic S905D / aarch64 / 2G RAM / 8G eMMC）
+# 存储宽裕，不像 K2P 卡在 16MB flash 上，所以代理内核可以全带上
+#
+CONFIG_TARGET_amlogic=y
+CONFIG_TARGET_amlogic_mesongx=y
+CONFIG_TARGET_amlogic_mesongx_DEVICE_phicomm_n1=y
+
+# 必须显式带上：aml-img 要把 u-boot 覆盖层打进 boot 分区，
+# 缺了会报 "No rule to make target .../phicomm-n1-u-boot-overlay.bin"
+CONFIG_PACKAGE_u-boot-phicomm-n1=y
+
+#
+# 镜像分区布局（写死在 target/linux/amlogic/image/Makefile 里）：
+#   p1 boot(FAT) 64MiB | p2 rootfs 256MiB | p3 overlay 2GiB（首扇区写 RESET000）
+# 所以 ROOTFS_PARTSIZE 不能超过 256，否则 rootfs 会压到 p3 上
+#
+CONFIG_TARGET_ROOTFS_PARTSIZE=256
+CONFIG_TARGET_ROOTFS_EXT4FS=y
+# CONFIG_TARGET_ROOTFS_SQUASHFS is not set
+# CONFIG_TARGET_ROOTFS_TARGZ is not set
+# CONFIG_TARGET_ROOTFS_CPIOGZ is not set
+
+#
+# LuCI 基础
+#
+CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-compat=y
+CONFIG_PACKAGE_luci-lua-runtime=y
+CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+
+#
+# ssr-plus 主体
+#
+CONFIG_PACKAGE_luci-app-ssr-plus=y
+CONFIG_PACKAGE_luci-i18n-ssr-plus-zh-cn=y
+
+# Lean's LEDE 默认还是 firewall3 / iptables（DEFAULT_PACKAGES.router 里就是 firewall+iptables）
+CONFIG_PACKAGE_luci-app-ssr-plus_Iptables_Transparent_Proxy=y
+
+#
+# 代理内核：aarch64 体积不是问题，订阅里的 59 个节点全部能跑
+#
+#   vmess / vless+REALITY  -> xray-core
+#   trojan                 -> trojan (C++)
+#   ss（2022-blake3）       -> shadowsocks-rust，libev 3.3.x 不支持 2022-blake3
+#   ssr                    -> shadowsocksr-libev
+#   hysteria2              -> hysteria v2
+#
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Xray=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Trojan=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Rust_Client=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Libev_Client=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Hysteria=y
+
+# 显式排掉同一个 choice 里的其它选项，避免 defconfig 走默认值
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_NONE_V2RAY is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_V2ray is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Libev_Client is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_NONE_Client is not set
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_NONE_Server=y
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Rust_Server is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks_Libev_Server is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Libev_Server is not set
+
+# 分流 / DNS 组件
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_DNS2SOCKS=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ChinaDNS_NG=y
+CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_IPT2Socks=y
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_MosDNS is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_NaiveProxy is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Tuic_Client is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadow_TLS is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Kcptun is not set
+# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Redsocks2 is not set
+
+#
+# 显式补齐依赖（多数会被 select 自动带上，写出来更稳）
+#
+CONFIG_PACKAGE_dnsmasq-full=y
+CONFIG_PACKAGE_ipset=y
+CONFIG_PACKAGE_iptables=y
+CONFIG_PACKAGE_iptables-mod-tproxy=y
+CONFIG_PACKAGE_iptables-mod-nat-extra=y
+CONFIG_PACKAGE_kmod-ipt-nat=y
+CONFIG_PACKAGE_kmod-ipt-tproxy=y
+CONFIG_PACKAGE_libuci-lua=y
+CONFIG_PACKAGE_lua=y
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_jq=y
+CONFIG_PACKAGE_ip-full=y
+CONFIG_PACKAGE_coreutils=y
+CONFIG_PACKAGE_coreutils-base64=y
+CONFIG_PACKAGE_tcping=y
+CONFIG_PACKAGE_nping=y
+CONFIG_PACKAGE_microsocks=y
+CONFIG_PACKAGE_dns2tcp=y
+CONFIG_PACKAGE_lua-neturl=y
+CONFIG_PACKAGE_resolveip=y
+CONFIG_PACKAGE_trojan=y
+CONFIG_PACKAGE_xray-core=y
+CONFIG_PACKAGE_hysteria=y
+CONFIG_PACKAGE_shadowsocks-rust-sslocal=y
+CONFIG_PACKAGE_shadowsocksr-libev-ssr-redir=y
+CONFIG_PACKAGE_shadowsocksr-libev-ssr-local=y
+
+#
+# 明确排除：这台用不上，编进去只浪费时间
+#
+# CONFIG_PACKAGE_luci-app-passwall is not set
+# CONFIG_PACKAGE_luci-app-openclash is not set
+# CONFIG_PACKAGE_v2ray-core is not set
+# CONFIG_PACKAGE_sing-box is not set
+# CONFIG_PACKAGE_mosdns is not set
