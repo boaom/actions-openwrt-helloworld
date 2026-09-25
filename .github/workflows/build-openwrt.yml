@@ -16,6 +16,11 @@ on:
   repository_dispatch:
   workflow_dispatch:
 
+# fork 出来的仓库默认 Workflow permissions 是只读的，
+# 不显式声明的话 softprops/action-gh-release 会报 403 Resource not accessible by integration
+permissions:
+  contents: write
+
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
