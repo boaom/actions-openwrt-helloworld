@@ -132,13 +132,27 @@ p3  overlay 2 GiB   首扇区写 "RESET000"
 ```
 
 产物是 `openwrt-amlogic-mesongx-phicomm_n1-ext4-sysupgrade.img.gz`，
-**这其实是个 U 盘启动镜像**，不是给 sysupgrade 用的：
+**这其实是个 U 盘启动镜像**，不是给 sysupgrade 用的。镜像里的自动脚本链条是
+（都写在 `target/linux/amlogic/image/*.cmd`，可以自己对着看）：
 
-1. `balenaEtcher` 或 `dd` 写到 U 盘；
-2. U 盘插到 N1 上开机。N1 的原厂 U-Boot 会跑 `aml_autoscript`
-   → `s905_autoscript` → 载入镜像里的 `u-boot.emmc` 并 `go`
-   → 新的 U-Boot 接管后执行 `emmc_autoscript`，自动装进 eMMC；
-3. 装完拔掉 U 盘重启即可。
+```
+aml_autoscript  -> setenv bootcmd ...; saveenv; reboot
+s905_autoscript -> fatload <usb> 0x1000000 u-boot.emmc; go 0x1000000
+emmc_autoscript -> 用镜像里的 u-boot.emmc 接管后装进 eMMC
+```
+
+刷机步骤（N1 原厂 U-Boot 不会主动去读 U 盘，要显式触发 update 模式）：
+
+1. `gzip -d` 出 `.img`，用 `balenaEtcher` 或 `dd` 写到 U 盘（≥4G，会整盘覆盖）；
+2. U 盘插到 N1 上，让 N1 进 **update 模式**再启动 —— 常见做法是原厂 Android 里
+   `adb shell reboot update`（或装好 root 后用同类 App 重启到 update）；
+   原厂 U-Boot 在 update 模式下才会去执行 U 盘里的 `aml_autoscript`；
+3. 脚本会载入镜像里的 `u-boot.emmc` 覆盖到 eMMC 的 boot 区，
+   之后由它执行 `emmc_autoscript` 把系统装进 eMMC；
+4. 装完拔掉 U 盘重启即可。
+
+> 上面第 2 步的触发方式取决于你 N1 原厂固件的状态（有没有 root / 降没降级）。
+> 这一步我这边没法验证，按你之前刷 N1 的习惯走就行；镜像里的脚本链条是确定的。
 
 也可以先只从 U 盘跑起来，再手动 `install-to-emmc.sh`（脚本在 `/root/`，
 按 68MiB/132MiB/764MiB 三个偏移重新分区并 dd 过去，目标 rootfs 分区正好 256MiB
