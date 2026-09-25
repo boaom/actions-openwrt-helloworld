@@ -1,16 +1,13 @@
 #!/bin/bash
-#=============================================================
-# https://github.com/P3TERX/Actions-OpenWrt
-# File name: diy-part1.sh
-# Description: OpenWrt DIY script part 1 (Before Update feeds)
-# Lisence: MIT
-# Author: P3TERX
-# Blog: https://p3terx.com
-#=============================================================
+# diy-part1.sh —— feeds update 之前执行
+# 只启用 helloworld（ssr-plus）这一个第三方 feed，缩短编译时间、避免体积膨胀
 
-# Uncomment a feed source
+# 打开 Lean's lede 自带的 helloworld feed（默认被注释）
 sed -i 's/^#\(.*helloworld\)/\1/' feeds.conf.default
 
-# Add a feed source
-# echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
-echo 'src-git passwall https://github.com/xiaorouji/openwrt-passwall' >>feeds.conf.default
+# 不要 passwall / openclash，K2P 的 16MB flash 装不下
+sed -i '/passwall/d' feeds.conf.default
+sed -i '/openclash/d' feeds.conf.default
+
+echo "feeds.conf.default 当前内容："
+grep -v '^#' feeds.conf.default | grep -v '^$'
