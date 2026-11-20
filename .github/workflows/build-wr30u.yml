@@ -154,7 +154,8 @@ jobs:
         touch release.txt
         echo "${DEVICE_LABEL} 固件 · 构建于 $(date '+%Y-%m-%d %H:%M %Z')" >> release.txt
         echo "" >> release.txt
-        echo "内核 6.12 · aarch64 · 已内置 xray-core / hysteria v2 / shadowsocks-rust / ssr-libev / trojan" >> release.txt
+        echo "LEDE 24.10.5 基线 · 内核 6.18 · firewall4/nftables · aarch64" >> release.txt
+        echo "已内置 xray-core / mihomo / hysteria v2 / shadowsocks-rust / ssr-libev / trojan" >> release.txt
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware to release

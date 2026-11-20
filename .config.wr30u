@@ -1,5 +1,7 @@
 #
 # Xiaomi / Redmi WR30U（MediaTek MT7981B / aarch64 / 256M RAM / 128M SPI-NAND）
+# 当前 coolsnowwolf/lede master 已是 24.10.5 基线：mediatek/filogic 内核 6.18，
+# 默认包改成 firewall4 + nftables-json（同时保留 iptables 兼容层）。
 # rootfs 走 ubi 里的 squashfs，ubi 分区 112MiB，压缩后装得下 xray + mihomo + hysteria
 #
 CONFIG_TARGET_mediatek=y
@@ -16,21 +18,22 @@ CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
 
 #
 # ssr-plus 主体
-# 注意：符号按 helloworld 的 dev 分支（默认分支）luci-app-ssr-plus 196 来写，
-# 老 master 分支上的 INCLUDE_Trojan / INCLUDE_Hysteria / INCLUDE_IPT2Socks /
-# INCLUDE_DNS2SOCKS / INCLUDE_V2ray / INCLUDE_Shadowsocks_Libev_Client 在 196 里
-# 已经不存在了，写进去会被 make defconfig 静默丢掉，所以内核一律用
-# CONFIG_PACKAGE_<二进制>=y 直接钉住。
+# 符号按 helloworld 默认分支 dev 的 luci-app-ssr-plus 198 写。
+# 196 时代的 INCLUDE_Trojan / INCLUDE_Hysteria / INCLUDE_IPT2Socks /
+# INCLUDE_DNS2SOCKS / INCLUDE_V2ray / INCLUDE_Shadowsocks_Libev_Client 已不存在，
+# 写进去会被 make defconfig 静默丢掉，所以内核一律用 CONFIG_PACKAGE_<二进制>=y 直接钉住。
 #
 CONFIG_PACKAGE_luci-app-ssr-plus=y
 CONFIG_PACKAGE_luci-i18n-ssr-plus-zh-cn=y
 
-# Lean's LEDE 默认还是 firewall3 / iptables（DEFAULT_PACKAGES.router 里就是 firewall+iptables）
-CONFIG_PACKAGE_luci-app-ssr-plus_Iptables_Transparent_Proxy=y
-# CONFIG_PACKAGE_luci-app-ssr-plus_Nftables_Transparent_Proxy is not set
+# 新版 LEDE 默认 firewall4：ssr-plus 的 Iptables 透明代理 depends on !PACKAGE_firewall4，
+# 在 fw4 基线上选了也会被 defconfig 静默丢弃，透明代理必须走 Nftables 模式
+# （对应 dnsmasq nftset + kmod-nft-socket/tproxy/nat）
+CONFIG_PACKAGE_luci-app-ssr-plus_Nftables_Transparent_Proxy=y
+# CONFIG_PACKAGE_luci-app-ssr-plus_Iptables_Transparent_Proxy is not set
 
 #
-# 196 版把 trojan / hysteria2 / tuic 这些统一交给 mihomo（Clash Meta）了，
+# 198 版把 trojan / hysteria2 / tuic 这些统一交给 mihomo（Clash Meta）了，
 # aarch64 上 INCLUDE_Mihomo 默认就是 y，这里显式写出来免得哪天上游改默认值
 #
 CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Mihomo=y
@@ -73,15 +76,15 @@ CONFIG_PACKAGE_shadowsocksr-libev-ssr-redir=y
 CONFIG_PACKAGE_shadowsocksr-libev-ssr-local=y
 
 #
-# ssr-plus 的 LUCI_DEPENDS 里本来就会带上这些，写出来更稳
+# ssr-plus 的 LUCI_DEPENDS 里本来就会带上这些，写出来更稳。
+# fw4 基线要的是 nftset 版 dnsmasq + kmod-nft-*（iptables-mod-tproxy 那套由默认包提供，不用重复写）
 #
 CONFIG_PACKAGE_dnsmasq-full=y
-CONFIG_PACKAGE_ipset=y
-CONFIG_PACKAGE_iptables=y
-CONFIG_PACKAGE_iptables-mod-tproxy=y
-CONFIG_PACKAGE_iptables-mod-nat-extra=y
-CONFIG_PACKAGE_kmod-ipt-nat=y
-CONFIG_PACKAGE_kmod-ipt-tproxy=y
+CONFIG_PACKAGE_dnsmasq_full_nftset=y
+CONFIG_PACKAGE_nftables-json=y
+CONFIG_PACKAGE_kmod-nft-socket=y
+CONFIG_PACKAGE_kmod-nft-tproxy=y
+CONFIG_PACKAGE_kmod-nft-nat=y
 CONFIG_PACKAGE_libuci-lua=y
 CONFIG_PACKAGE_lua=y
 CONFIG_PACKAGE_lua-neturl=y

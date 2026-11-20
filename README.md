@@ -13,7 +13,7 @@
 |---|---|---|---|---|
 | Phicomm K2P (A1/A2) | `build-openwrt.yml` | `.config` | ramips/mt7621 (mipsel) | 5.10 |
 | Phicomm N1 盒子 | `build-n1.yml` | `.config.n1` | amlogic/mesongx (aarch64) | 6.18 |
-| Xiaomi WR30U | `build-wr30u.yml` | `.config.wr30u` | mediatek/filogic (aarch64) | 6.12 |
+| Xiaomi WR30U | `build-wr30u.yml` | `.config.wr30u` | mediatek/filogic (aarch64) | 6.18 |
 
 三个 workflow 都会在 `make defconfig` 之后断言目标设备确实被选进了 `.config`
 （`DEVICE_ASSERT`），选不中就立刻失败，不会白跑两小时才发现编错设备。
