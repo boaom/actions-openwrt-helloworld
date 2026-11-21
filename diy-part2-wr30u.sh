@@ -85,13 +85,22 @@ fi
 # zram-swap 依赖它，会自动带进来，这里显式写清楚便于审阅。
 # ---------------------------------------------------------------------------
 echo "--- 校验 zram 相关包存在 ---"
-for pkg in kmod-zram zram-swap; do
-	if [ -d "feeds/packages" ] && ! grep -rqs "KernelPackage/zram\|PKG_NAME:=zram-swap" feeds/packages/; then
-		echo "!! feeds 里找不到 $pkg 定义"
-		exit 1
-	fi
-	echo "  ok: $pkg"
-done
+# 注意路径：这两个都在 lede 主源码树里，不在 feeds 里。
+#   kmod-zram  -> package/kernel/linux/modules/other.mk   (KernelPackage/zram)
+#   zram-swap  -> package/system/zram-swap/               (PKG_NAME:=zram-swap)
+# 只有 mihomo / nikki 这类第三方包才在 feeds/ 下。
+if grep -q "KernelPackage/zram" package/kernel/linux/modules/other.mk; then
+	echo "  ok: kmod-zram (package/kernel/linux/modules/other.mk)"
+else
+	echo "!! 主树里找不到 kmod-zram"
+	exit 1
+fi
+if grep -q "PKG_NAME:=zram-swap" package/system/zram-swap/Makefile; then
+	echo "  ok: zram-swap (package/system/zram-swap)"
+else
+	echo "!! 主树里找不到 zram-swap"
+	exit 1
+fi
 
 # ⚠️ 关键修正：zram 压缩后端的版本门槛
 #
@@ -109,9 +118,8 @@ done
 #   → zram.ko 编出来没有任何压缩后端，初始化即失败，swap 起不来
 #
 # 放宽门槛到 6.18 / 7.3（lede 现有的内核版本档位），让选择块正常生效。
-# 注意改的是 feeds 里的副本（feeds/packages/kernel/modules/other.mk），
-# 工作流在 feeds install 之后跑本脚本，路径正好对得上。
-OTHER_MK="feeds/packages/kernel/modules/other.mk"
+# 改的是主源码树的 package/kernel/linux/modules/other.mk（不是 feeds 副本）。
+OTHER_MK="package/kernel/linux/modules/other.mk"
 if [ -f "$OTHER_MK" ]; then
 	echo "--- 放宽 zram 后端的内核版本门槛 ---"
 	before=$(grep -c "if LINUX_6_12$" "$OTHER_MK")
