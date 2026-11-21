@@ -1,0 +1,31 @@
+#!/bin/sh
+# 97-carbon-theme —— 首启安装离线 Carbon 主题并设为默认
+#
+# luci-theme-carbon 不在 coolsnowwolf/luci 的 feed 里，没法直接写成
+# CONFIG_PACKAGE_luci-theme-carbon=y（会被 defconfig 静默丢弃）。
+# 改成把官方 ipk 随固件带进来，首启离线 opkg 安装。
+#
+# ipk 来源：github.com/mrjoechen/luci-theme-carbon releases v1.1.8
+# 校验：sha256 = 99cfad5d365a39911c411aa2025670868480cfe61534c906c64ec7eebf4ab310
+#
+# 依赖 flock / curl / ca-bundle 已在 .config.wr30u 里显式选中，
+# 所以这里用 --no-depends 之外的普通安装就能过。
+
+IPK=/opt/pkgs/luci-theme-carbon.ipk
+
+[ -f "$IPK" ] || exit 0
+
+# 已装过就跳过（保留用户手动升级的版本）
+if opkg list-installed 2>/dev/null | grep -q '^luci-theme-carbon '; then
+	exit 0
+fi
+
+opkg install "$IPK" >/dev/null 2>&1 || exit 0
+
+# uci-defaults 的 30_luci-theme-carbon 已在安装时设置 mediaurlbase；
+# 这里再确认一次，保证首启就生效。
+uci -q set luci.themes.Carbon='/luci-static/carbon'
+uci -q set luci.main.mediaurlbase='/luci-static/carbon'
+uci -q commit luci
+
+exit 0

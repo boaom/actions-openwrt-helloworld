@@ -1,0 +1,26 @@
+#!/bin/sh
+# 99-zram-settings —— 首次启动时写入 zram 运行参数
+#
+# 为什么不用直接改 /etc/config/system：那份文件是 config_generate 在
+# 首启时动态生成的（见 package/base-files/files/bin/config_generate），
+# 源码树里根本没有静态副本，sed 改不到。
+#
+# 尺寸：默认是 MemTotal/2048 = 113MB（本机 231MB）。设 192MB 是为了给
+# mihomo 的流量尖峰留出足够换出空间。lzo 对可压缩页约 2.5-3:1，
+# 满打满算吃掉 ~70MB 物理内存，换来 ~190MB 的 swap 地址空间。
+#
+# 算法：必须是内核实际编进去的后端。本固件 KERNEL_ZRAM_BACKEND_LZO=y，
+# 6.18 的 LZO 后端同时提供 lzo 和 lzo-rle。lzo-rle 对含重复字节的
+# 数据（网络缓冲、日志）压缩率略高，且解码更快。
+
+[ -f /etc/config/system ] || exit 0
+
+uci -q get system.@system[0].zram_size_mb >/dev/null || \
+	uci -q set system.@system[0].zram_size_mb='192'
+uci -q get system.@system[0].zram_comp_algo >/dev/null || \
+	uci -q set system.@system[0].zram_comp_algo='lzo-rle'
+uci -q get system.@system[0].zram_priority >/dev/null || \
+	uci -q set system.@system[0].zram_priority='100'
+uci -q commit system
+
+exit 0

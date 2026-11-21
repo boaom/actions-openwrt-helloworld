@@ -1,0 +1,26 @@
+#!/bin/sh
+# 98-nikki-tuning —— 新固件首启时的 nikki 默认值
+#
+# 两个坑都在 2026-11-21 实测踩过（231MB RAM / 0 swap 的 WR30U）：
+#
+# 1) test_profile=1（上游默认）
+#    start_service 在 procd 起 core 之前，会先跑一份完整的 `mihomo -t`
+#    预检 —— 26KB config + 8.4MB geoip.metadb 全量加载。旧 UPX 版这一份
+#    峰值 ~40MB；而当时机器 MemAvailable 只有 8-12MB，直接触发全局 OOM。
+#    更糟的是 start_service 不先停旧实例，连点几次 LuCI 启动就叠几个进程。
+#    关掉后实测启动 6.26s（原来 >30s），无新 OOM。
+#
+# 2) GOMEMLIMIT 没设
+#    Go 默认按可用内存推 GC 目标，在这种小内存机器上会放任堆涨到被杀。
+#    96MiB 让 runtime 提前收缩，实测稳定在 60-70MB RSS。
+#
+# 用 uci-defaults 而不是改 /etc/config/nikki：后者是 conffile，
+# 首次安装时生成，源码树里没有可靠副本可 sed。
+
+[ -f /etc/config/nikki ] || exit 0
+
+uci -q set nikki.config.test_profile='0'
+uci -q set nikki.procd.env_go_mem_limit='96MiB'
+uci -q commit nikki
+
+exit 0
